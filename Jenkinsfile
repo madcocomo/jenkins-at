@@ -1,15 +1,10 @@
 node {
    def mvnHome
-   stage('Check-out') { // for display purposes
-      // Get some code from a GitHub repository
+   stage('Check-out') { 
       git 'https://github.com/madcocomo/fizzbuzz-adv.git'
-      // Get the Maven tool.
-      // ** NOTE: This 'M3' Maven tool must be configured
-      // **       in the global configuration.           
       mvnHome = tool 'M3'
    }
    stage('Build') {
-      // Run the maven build
       withEnv(["MVN_HOME=$mvnHome"]) {
          if (isUnix()) {
             sh '"$MVN_HOME/bin/mvn" clean package'
@@ -18,10 +13,10 @@ node {
          }
       }
       junit '**/target/surefire-reports/TEST-*.xml'
-      //archiveArtifacts 'target/*.jar'
    }
    stage('Verify') {
-      java -jar target/*.jar > result.txt
-      sh 'diff -d 1.txt result.txt'
+      git 'https://github.com/madcocomo/jenkins-at.git/'
+      sh 'java -jar target/*.jar > result.txt'
+      sh 'diff 1.txt result.txt'
    }
 }
