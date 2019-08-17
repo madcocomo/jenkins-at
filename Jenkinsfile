@@ -1,22 +1,47 @@
-node {
-   def mvnHome
-   stage('Check-out') { 
-      git 'https://github.com/madcocomo/fizzbuzz-adv.git'
-      mvnHome = tool 'M3'
-   }
-   stage('Build') {
-      withEnv(["MVN_HOME=$mvnHome"]) {
-         if (isUnix()) {
-            sh '"$MVN_HOME/bin/mvn" clean package'
-         } else {
-            bat(/"%MVN_HOME%\bin\mvn" clean package/)
-         }
-      }
-      junit '**/target/surefire-reports/TEST-*.xml'
-   }
-   stage('Verify') {
-      git 'https://github.com/madcocomo/jenkins-at.git/'
-      sh 'java -jar target/*.jar > result.txt'
-      sh 'diff 1.txt result.txt'
-   }
+pipeline {
+    agent any
+    tools {
+        maven 'M3'
+    }
+    stages { 
+        stage('Build') {
+            steps {
+                sh 'mvn clean package'
+                junit '**/target/surefire-reports/TEST-*.xml'
+                sh 'git config --local credential.helper "!p() { echo username=\\$GIT_USERNAME; echo password=\\$GIT_PASSWORD; }; p"'
+            }
+        }
+        stage('Verify') {
+            steps {
+                script {
+                    //git 'https://github.com/madcocomo/jenkins-at.git/'
+                    def tests = 'v1,v2,v3,v4,v5'.split(',')
+
+                    def tags = sh script: "git tag --merged", returnStdout: true
+                    def success = false
+                    for (test in tests) {
+                        stage("Test ${test}") {
+                            if (tags ==~ /(?s).*-pass-${test}-.*/) {
+                                echo "Passed before"
+                            } else {
+                                sh "echo ${test} > expect"
+                                sh 'java -jar target/*.jar > result'
+                                sh 'diff expect result'
+
+                                sh "git tag ${BRANCH_NAME}-pass-${test}-${BUILD_ID}"
+                                withCredentials([
+                                  usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')
+                                ]) {
+                                  sh 'git push origin --tags'
+                                }
+                                success = true
+                                echo "Passed"
+                            }
+                        }
+                        if (success) break;
+                    }                    
+                }
+            }
+        }
+    }
 }
