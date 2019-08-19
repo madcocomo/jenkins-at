@@ -1,10 +1,10 @@
 def tests() {
     return [
-[name: 'test1', desc:'111', expect:'v1'],
-[name: 'test2', desc:'222', expect:'v2'],
-[name: 'test3', desc:'333', expect:'v3'],
-[name: 'test4', desc:'444', expect:'v4'],
-[name: 'test5', desc:'555', expect:'v5']
+[name: 'test1', nextDesc:'print "v2"', expect:'v1'],
+[name: 'test2', nextDesc:'print "v3"', expect:'v2'],
+[name: 'test3', nextDesc:'print "v4"', expect:'v3'],
+[name: 'test4', nextDesc:'print "v5"', expect:'v4'],
+[name: 'test5', nextDesc:'Well down', expect:'v5']
     ]
 }
 
@@ -17,12 +17,12 @@ def runTests(pipe) {
                 echo "Passed before"
             } else {
                 verify(test.expect)
-                tagBuild(pipe, test.name)
+                updateGitRepo(pipe, test)
                 success = true
                 echo "Passed"
             }
         }
-        if (success) break;
+        if (success) break
     }
 }
 
@@ -37,16 +37,23 @@ def verify(expect) {
     sh 'diff expect result'
 }
 
-def isPassTagExists(tags, test) {
-    return tags ==~ /(?s).*-pass-${test}-.*/
+def isPassTagExists(tags, name) {
+    return tags ==~ /(?s).*-pass-${name}-.*/
 }
 
-def tagBuild(pipe, test) {
+def updateGitRepo(pipe, test) {
     sh 'git config --local credential.helper "!p() { echo username=\\$GIT_USERNAME; echo password=\\$GIT_PASSWORD; }; p"'
-    sh "git tag ${pipe.BRANCH_NAME}-pass-${test}-${pipe.BUILD_ID}"
+    sh "echo '${test.nextDesc}' >> README.md"
+    sh "git add README.md"
+    sh "git config user.name 'jenkins'"
+    sh "git config user.email 'jenkins@tdd.io'"
+    sh "git commit -m 'update README'"
+
+    sh "git tag ${pipe.BRANCH_NAME}-pass-${test.name}-${pipe.BUILD_ID}"
     withCredentials([
       usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')
     ]) {
+      sh "git push origin ${pipe.BRANCH_NAME}"
       sh 'git push origin --tags'
     }
 }
