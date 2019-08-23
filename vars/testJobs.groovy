@@ -6,7 +6,7 @@ def runTests(pipe, tests) {
             if (isPassTagExists(tags, test.name)) {
                 echo "Passed before"
             } else {
-                verify(test.expect)
+                verify(test)
                 updateGitRepo(pipe, test)
                 success = true
                 echo "Passed"
@@ -21,9 +21,9 @@ def getTags() {
     return tags
 }
 
-def verify(expect) {
-    sh "echo '${expect}' > expect"
-    sh 'java -jar target/*.jar > result'
+def verify(test) {
+    sh "echo '${test.expect}' > expect"
+    sh "java -jar target/*.jar ${test.args?:''}> result"
     sh 'diff expect result'
 }
 
