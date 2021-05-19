@@ -22,9 +22,7 @@ def getTags() {
 }
 
 def verify(test) {
-    sh "echo '${test.expect}' > expect"
-    sh "java -jar target/*.jar ${test.args?:''}> result"
-    sh 'diff expect result'
+    sh "${test.command}"
 }
 
 def isPassTagExists(tags, name) {
@@ -33,12 +31,6 @@ def isPassTagExists(tags, name) {
 
 def updateGitRepo(pipe, test) {
     sh 'git config --local credential.helper "!p() { echo username=\\$GIT_USERNAME; echo password=\\$GIT_PASSWORD; }; p"'
-    sh "echo '${test.nextDesc}' >> README.md"
-    sh "git add README.md"
-    sh "git config user.name 'jenkins'"
-    sh "git config user.email 'jenkins@tdd.io'"
-    sh "git commit -m 'update README'"
-
     sh "git tag ${pipe.BRANCH_NAME}-pass-${test.name}-${pipe.BUILD_ID}"
     withCredentials([
       usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')
