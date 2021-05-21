@@ -35,7 +35,6 @@ def updateGitRepo(pipe, test) {
     withCredentials([
       usernamePassword(credentialsId: 'github', usernameVariable: 'GIT_USERNAME', passwordVariable: 'GIT_PASSWORD')
     ]) {
-      sh "git push origin ${pipe.BRANCH_NAME}"
       sh 'git push origin --tags'
     }
 }
